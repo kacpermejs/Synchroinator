@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import fs from "fs";
 import { getOAuthClient } from "./auth";
 import { askQuestion } from "./utils";
-import { FOLDER_ID } from "../config/google.config";
+import { SettingsStorageService } from "./settings-storage";
 
 async function listFolders() {
   const auth = await getOAuthClient();
@@ -26,9 +26,9 @@ async function listFolders() {
   const selectedFolder = folders[parseInt(choice) - 1];
 
   if (selectedFolder) {
-    fs.appendFileSync(".env", `\nGOOGLE_DRIVE_FOLDER_ID=${selectedFolder.id}`);
+    SettingsStorageService.saveFolderId(`${selectedFolder.id}`)
     console.log(`Selected folder: ${selectedFolder.name} (ID: ${selectedFolder.id})`);
-    return selectedFolder.id;
+    return selectedFolder.id ?? null;
   } else {
     console.log("Invalid selection.");
     return null;
@@ -39,7 +39,12 @@ async function uploadFile(filePath: string) {
   const auth = await getOAuthClient();
   const drive = google.drive({ version: "v3", auth });
 
-  const folderId = FOLDER_ID || (await listFolders());
+  let folderId = SettingsStorageService.loadFolderId();
+
+  if (!folderId) {
+    console.log("Google Drive Folder not yet selected...");
+    folderId = await listFolders();
+  }
 
   if (!folderId) {
     console.error("No folder selected. Upload aborted.");

@@ -8,5 +8,3 @@ export const SCOPES = [
 ];
 
 export const CREDENTIALS_PATH = process.env.GOOGLE_DRIVE_CREDENTIALS || "./config/credentials.json";
-export const TOKEN_PATH = process.env.GOOGLE_DRIVE_TOKEN || "token.json";
-export let FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID || "";
