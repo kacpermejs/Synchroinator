@@ -1,0 +1,21 @@
+{
+  "name": "Synchroinator",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon --ext ts --exec ts-node src/index.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "nodemon": "^3.1.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@types/gapi": "^0.0.47",
+    "dotenv": "^16.4.7",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^144.0.0"
+  }
+}
