@@ -5,7 +5,8 @@
     "moduleResolution": "NodeNext",
     "baseUrl": "./src",
     "paths": {
-      "config/*": ["app/_config/*"]
+      "@config/*": ["app/config/*"],
+      "@core/*": ["app/core/*"]
     },
     "outDir": "./dist",
     "sourceMap": true,

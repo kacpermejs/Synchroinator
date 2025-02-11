@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import { OAuth2Client } from "google-auth-library";
 import fs from "fs";
 import { askQuestion } from "./utils";
-import { CREDENTIALS_PATH, SCOPES } from "../config/google.config";
+import { CREDENTIALS_PATH, SCOPES } from "@config/google.config";
 import { StorageRegistry } from "./storage/StorageRegistry";
 import { TokenStorage } from "./storage/TokenStorage";
 

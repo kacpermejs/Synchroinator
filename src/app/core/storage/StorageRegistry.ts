@@ -3,7 +3,7 @@ import fs from "fs";
 import { AppDataStorage } from "./AppDataStorage";
 import { SettingsStorage } from "./SettingsStorage";
 import { TokenStorage } from "./TokenStorage";
-import path from "path";
+import { GameSaveStorage } from "./GameSaveStorage";
 
 
 export class StorageRegistry {
@@ -18,6 +18,7 @@ export class StorageRegistry {
 
     this.register(TokenStorage, "token.json");
     this.register(SettingsStorage, "config.json");
+    this.register(GameSaveStorage, "gameFileRegistry.json");
   }
 
   private static storageInstances = new Map<Function, AppDataStorage<any>>();
@@ -42,5 +43,9 @@ export class StorageRegistry {
 
   static getTokenStorage() {
     return this.get(TokenStorage);
+  }
+
+  static getGameFileRegistryStorage() {
+    return this.get(GameSaveStorage);
   }
 }

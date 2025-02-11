@@ -4,7 +4,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "nodemon --ext ts --exec ts-node src/index.ts"
+    "dev": "nodemon --exec ts-node -r tsconfig-paths/register src/index.ts"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
@@ -17,6 +17,7 @@
     "appdata-path": "^1.0.0",
     "dotenv": "^16.4.7",
     "google-auth-library": "^9.15.1",
-    "googleapis": "^144.0.0"
+    "googleapis": "^144.0.0",
+    "tsconfig-paths": "^4.2.0"
   }
 }
