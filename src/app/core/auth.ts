@@ -3,15 +3,17 @@ import { OAuth2Client } from "google-auth-library";
 import fs from "fs";
 import { askQuestion } from "./utils";
 import { CREDENTIALS_PATH, SCOPES } from "../config/google.config";
-import { SettingsStorageService } from "./settings-storage";
+import { StorageRegistry } from "./storage/StorageRegistry";
+import { TokenStorage } from "./storage/TokenStorage";
 
 async function getOAuthClient(): Promise<OAuth2Client> {
   const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf-8"));
   const { client_id, client_secret, redirect_uris } = credentials.installed;
 
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0]);
+  const tokenStorage = StorageRegistry.getTokenStorage();
 
-  const token = SettingsStorageService.loadToken();
+  const token = tokenStorage.load()
   if (token) {
     oAuth2Client.setCredentials(token);
   } else {
@@ -24,7 +26,7 @@ async function getOAuthClient(): Promise<OAuth2Client> {
     const code = await askQuestion("Enter the code from that page: ");
     const newToken = (await oAuth2Client.getToken(code)).tokens;
 
-    SettingsStorageService.saveToken(newToken);
+    tokenStorage.save(newToken);
     console.log("Token stored successfully.");
     oAuth2Client.setCredentials(newToken);
   }

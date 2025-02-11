@@ -1,12 +1,7 @@
-import { getOAuthClient } from "./app/core/auth";
-import { uploadFile } from "./app/core/driveService";
+import { App } from "./app/app";
 
 async function main() {
-  console.log("🔑 Authenticating...");
-  await getOAuthClient();
-
-  console.log("📤 Uploading file...");
-  await uploadFile("test.txt"); // Replace with actual file path
+  App.run();
 }
 
 main().catch(console.error);
