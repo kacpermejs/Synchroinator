@@ -39,6 +39,7 @@ async function uploadFile(filePath: string, cloudId?: string) {
   const auth = await getOAuthClient();
   const drive = google.drive({ version: "v3", auth });
 
+  // Ensure we have the correct folder ID
   let folderId = StorageRegistry.getConfigStorage().load()?.driveRootFolder ?? null;
 
   if (!folderId) {
@@ -51,14 +52,7 @@ async function uploadFile(filePath: string, cloudId?: string) {
     return;
   }
 
-  const fileName = filePath.split("/").pop();
-
-  const existingFiles = await drive.files.list({
-    q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
-    fields: "files(id)",
-  });
-
-  const existingFile = existingFiles.data.files?.[0];
+  const fileName = filePath.split("/").pop(); // Extract file name from path
 
   const fileMetadata = {
     name: fileName,
@@ -71,15 +65,21 @@ async function uploadFile(filePath: string, cloudId?: string) {
   };
 
   let response;
-  
-  if (existingFile && existingFile.id) {
-    console.log(`Updating existing file: ${fileName} (ID: ${existingFile.id})`);
+  let fileExists = false;
+
+  if (cloudId) {
+    fileExists = true;
+  }
+
+  if (fileExists) {
+    // If file exists, update it
+    console.log(`Updating existing file: ${fileName} (ID: ${cloudId})`);
     response = await drive.files.update({
-      fileId: existingFile.id,
-      media: media
+      fileId: cloudId,
+      media: media,
     });
   } else {
-    // **3️⃣ Upload a new file**
+    // If file doesn't exist, create a new one
     console.log(`Uploading new file: ${fileName}`);
     response = await drive.files.create({
       requestBody: fileMetadata,

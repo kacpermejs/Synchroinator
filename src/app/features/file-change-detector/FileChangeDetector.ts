@@ -1,6 +1,7 @@
 import fs from "fs";
-import crypto from 'crypto';
 import { RegisteredFile } from "../../core/models/RegisteredFile";
+import path from "path";
+import { log } from "console";
 
 export class FileChangeDetector {
 
@@ -8,16 +9,34 @@ export class FileChangeDetector {
     if (!fs.existsSync(registeredFile.path)) {
       throw new Error(`File does not exist: ${registeredFile.path}`);
     }
-    const fileStats = fs.statSync(registeredFile.path);
     
-    const modification = fileStats.mtimeMs;
+    const modification = this.getLatestModificationTime(registeredFile.path);
     const lastKnownModification = registeredFile.lastModification;
+
+    log(modification, lastKnownModification);
 
     return modification > lastKnownModification;
   }
 
-  public computeHash(filePath: string): string {
-    const fileBuffer = fs.readFileSync(filePath);
-    return crypto.createHash('sha256').update(fileBuffer).digest('hex');
+  getLatestModificationTime(directoryPath: string): number {
+    let latestTime = 0;
+  
+    function checkDir(dir: string) {
+      const entries = fs.readdirSync(dir);
+  
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry);
+        const stats = fs.statSync(fullPath);
+  
+        if (stats.isDirectory()) {
+          checkDir(fullPath); // Recursively check subdirectories
+        } else {
+          latestTime = Math.max(latestTime, stats.mtimeMs); // Update latest time
+        }
+      }
+    }
+  
+    checkDir(directoryPath);
+    return latestTime;
   }
 }

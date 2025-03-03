@@ -142,3 +142,4 @@ dist
 
 # File for testing
 z_test/
+*.zip

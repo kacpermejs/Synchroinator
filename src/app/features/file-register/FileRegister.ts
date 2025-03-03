@@ -3,7 +3,8 @@ import { FileChangeDetector } from "../file-change-detector/FileChangeDetector";
 import { StorageRegistry } from "./../../core/storage/StorageRegistry";
 import { RegisteredFile } from "../../core/models/RegisteredFile";
 import fs from "fs";
-
+import path from "path";
+import { CloudFileStorage } from "../cloud-file-storage/CloudFileStorage";
 
 export class FileRegister {
   private files: RegisteredFile[] = [];
@@ -27,17 +28,15 @@ export class FileRegister {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File does not exist: ${filePath}`);
     }
-    
+  
+    const lastModification = this.changeDetector.getLatestModificationTime(filePath);
+
     const existing = this.files.find(file => file.path === filePath);
-    const fileStats = fs.statSync(filePath);
-    
-    const hash = this.changeDetector.computeHash(filePath);
-    const lastModification = fileStats.mtimeMs;
-
+  
     if (!existing) {
-      this.files.push({ path: filePath, hash: hash, lastModification: lastModification});
+      this.files.push({ path: filePath, lastModification: lastModification });
     }
-
+  
     this.save();
   }
 
@@ -58,36 +57,36 @@ export class FileRegister {
     let nothingToUpload = true;
     console.log("Synchronizing files...");
     for (const file of this.files) {
-      if (file.lastSync && !this.changeDetector.wasFileModified(file)) {
+      console.log("Last sync: ", file.lastSync)
+      console.log("Was modified: ", this.changeDetector.wasFileModified(file))
+      if (!this.changeDetector.wasFileModified(file) && file.lastSync)
         continue;
-      }
+
       //send if was modified
       nothingToUpload = false;
-      this.refreshRegisteredData(file);
-
+      
       try {
-        const response = await uploadFile(file.path);
+        const response = await CloudFileStorage.uploadRegisteredFile(file);
         console.log(`File ${file.path} uploaded, ID: ${response?.data.id}`);
+        this.refreshRegisteredData(file, response);
       } catch (error) {
         console.error(`❌ Failed to upload ${file.path}: ${error}`);
+        throw error;
       }
     }
     if (nothingToUpload)
       console.log("No change");
   }
 
-  refreshRegisteredData(file: RegisteredFile) {
+  refreshRegisteredData(file: RegisteredFile, uploadResponse: any) {
     if (!fs.existsSync(file.path)) {
       console.warn(`⚠️ File no longer exists: ${file.path}`);
       return;
     }
-  
-    const fileStats = fs.statSync(file.path);
-    file.hash = this.changeDetector.computeHash(file.path);
     file.lastSync = Date.now();
-    file.lastModification = fileStats.mtimeMs;
+    file.lastModification = this.changeDetector.getLatestModificationTime(file.path);
+    file.onlineId = uploadResponse?.data.id;
   
     this.save();
   }
-  
 }

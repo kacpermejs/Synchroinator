@@ -9,7 +9,7 @@ export class GameSaveStorage extends AppDataStorage<RegisteredFile[]> {
 
   load(): RegisteredFile[] | null {
     const res = super.load();
-    if(!res)
+    if(!res || res.length === 0)
       console.log("No files registered!");
     return res;
   }
