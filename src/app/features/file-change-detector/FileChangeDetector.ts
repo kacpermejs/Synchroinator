@@ -1,6 +1,6 @@
 import fs from "fs";
 import crypto from 'crypto';
-import { RegisteredFile } from "../file-register/models/RegisteredFile";
+import { RegisteredFile } from "../../core/models/RegisteredFile";
 
 export class FileChangeDetector {
 

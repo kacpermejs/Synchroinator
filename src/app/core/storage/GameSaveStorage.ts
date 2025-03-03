@@ -1,4 +1,4 @@
-import { RegisteredFile } from "app/features/file-register/models/RegisteredFile";
+import { RegisteredFile } from "@core/models/RegisteredFile";
 import { AppDataStorage } from "./AppDataStorage";
 
 export class GameSaveStorage extends AppDataStorage<RegisteredFile[]> {

@@ -1,3 +1,4 @@
+import { AppConfigInitializer } from "@config/appConfigInitializer";
 import { getOAuthClient } from "./core/auth";
 import { StorageRegistry } from "./core/storage/StorageRegistry";
 import { askQuestion } from "./core/utils";
@@ -6,10 +7,12 @@ import { FileRegister } from "./features/file-register/FileRegister";
 export class App {
 
   static async init() {
-    console.log("Loading settings");
+    console.log("Loading settings...");
     StorageRegistry.init();
     console.log("🔑 Authenticating...");
     await getOAuthClient();
+    console.log("Checking configuration...")
+    await AppConfigInitializer.init();
   }
 
   static async run() {

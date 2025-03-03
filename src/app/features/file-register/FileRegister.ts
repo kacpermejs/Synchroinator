@@ -1,7 +1,7 @@
 import { uploadFile } from "@core/driveService";
 import { FileChangeDetector } from "../file-change-detector/FileChangeDetector";
 import { StorageRegistry } from "./../../core/storage/StorageRegistry";
-import { RegisteredFile } from "./models/RegisteredFile";
+import { RegisteredFile } from "../../core/models/RegisteredFile";
 import fs from "fs";
 
 
@@ -32,11 +32,10 @@ export class FileRegister {
     const fileStats = fs.statSync(filePath);
     
     const hash = this.changeDetector.computeHash(filePath);
-    const lastSync = null;
     const lastModification = fileStats.mtimeMs;
 
     if (!existing) {
-      this.files.push({ path: filePath, lastSync, hash, lastModification});
+      this.files.push({ path: filePath, hash: hash, lastModification: lastModification});
     }
 
     this.save();
@@ -67,8 +66,8 @@ export class FileRegister {
       this.refreshRegisteredData(file);
 
       try {
-        await uploadFile(file.path);
-        console.log(`✅ Uploaded: ${file.path}`);
+        const response = await uploadFile(file.path);
+        console.log(`File ${file.path} uploaded, ID: ${response?.data.id}`);
       } catch (error) {
         console.error(`❌ Failed to upload ${file.path}: ${error}`);
       }

@@ -139,3 +139,6 @@ dist
 /config/*
 .env
 **/token.json
+
+# File for testing
+z_test/

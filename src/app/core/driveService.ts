@@ -2,10 +2,9 @@ import { google } from "googleapis";
 import fs from "fs";
 import { getOAuthClient } from "./auth";
 import { askQuestion } from "./utils";
-import { SettingsStorage } from "./storage/SettingsStorage";
 import { StorageRegistry } from "./storage/StorageRegistry";
 
-async function listFolders() {
+async function configureAppCloudFolder() {
   const auth = await getOAuthClient();
   const drive = google.drive({ version: "v3", auth });
 
@@ -36,7 +35,7 @@ async function listFolders() {
   }
 }
 
-async function uploadFile(filePath: string) {
+async function uploadFile(filePath: string, cloudId?: string) {
   const auth = await getOAuthClient();
   const drive = google.drive({ version: "v3", auth });
 
@@ -44,7 +43,7 @@ async function uploadFile(filePath: string) {
 
   if (!folderId) {
     console.log("Google Drive Folder not yet selected...");
-    folderId = await listFolders();
+    folderId = await configureAppCloudFolder();
   }
 
   if (!folderId) {
@@ -52,8 +51,17 @@ async function uploadFile(filePath: string) {
     return;
   }
 
+  const fileName = filePath.split("/").pop();
+
+  const existingFiles = await drive.files.list({
+    q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+    fields: "files(id)",
+  });
+
+  const existingFile = existingFiles.data.files?.[0];
+
   const fileMetadata = {
-    name: filePath.split("/").pop(),
+    name: fileName,
     parents: [folderId],
   };
 
@@ -62,13 +70,25 @@ async function uploadFile(filePath: string) {
     body: fs.createReadStream(filePath),
   };
 
-  const response = await drive.files.create({
-    requestBody: fileMetadata,
-    media,
-    fields: "id",
-  });
+  let response;
+  
+  if (existingFile && existingFile.id) {
+    console.log(`Updating existing file: ${fileName} (ID: ${existingFile.id})`);
+    response = await drive.files.update({
+      fileId: existingFile.id,
+      media: media
+    });
+  } else {
+    // **3️⃣ Upload a new file**
+    console.log(`Uploading new file: ${fileName}`);
+    response = await drive.files.create({
+      requestBody: fileMetadata,
+      media,
+      fields: "id",
+    });
+  }
 
-  console.log("File uploaded, ID:", response.data.id);
+  return response;
 }
 
-export { listFolders, uploadFile };
+export { configureAppCloudFolder, uploadFile };
