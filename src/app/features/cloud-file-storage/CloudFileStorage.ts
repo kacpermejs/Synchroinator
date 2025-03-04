@@ -1,4 +1,4 @@
-import { uploadFile } from "@core/driveService";
+import { DriveService } from "@core/DriveService";
 import { RegisteredFile } from "@core/models/RegisteredFile";
 import archiver from "archiver";
 import path from "path";
@@ -11,12 +11,12 @@ export class CloudFileStorage {
     if (fileStats.isDirectory()) {
       return this.uploadDirectoryAsZip(file.path, file.onlineId);
     }
-    return uploadFile(file.path, file.onlineId);
+    return DriveService.uploadFile(file.path, file.onlineId);
   }
   
   static async uploadDirectoryAsZip(directoryPath: string, cloudId?: string) {
     const zipPath = await this.zipDirectory(directoryPath);
-    return await uploadFile(zipPath, cloudId);
+    return await DriveService.uploadFile(zipPath, cloudId);
   }
   
   private static async zipDirectory(sourceDir: string): Promise<string> {

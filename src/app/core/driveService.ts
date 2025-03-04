@@ -1,94 +1,118 @@
-import { google } from "googleapis";
+import { drive_v3, google } from "googleapis";
 import fs from "fs";
 import { getOAuthClient } from "./auth";
 import { askQuestion } from "./utils";
 import { StorageRegistry } from "./storage/StorageRegistry";
+import { OAuth2Client } from "google-auth-library";
 
-async function configureAppCloudFolder() {
-  const auth = await getOAuthClient();
-  const drive = google.drive({ version: "v3", auth });
+export class DriveService {
+  static auth: OAuth2Client;
+  static drive: drive_v3.Drive;
 
-  const res = await drive.files.list({
-    q: "mimeType='application/vnd.google-apps.folder'",
-    fields: "files(id, name)",
-  });
-
-  const folders = res.data.files || [];
-  if (folders.length === 0) {
-    console.log("No folders found.");
-    return null;
+  static async init() {
+    this.auth = await getOAuthClient();
+    this.drive = google.drive({ version: "v3", auth: this.auth });
   }
+  
+  static async configureAppCloudFolder() {
 
-  console.log("\nAvailable Folders:");
-  folders.forEach((folder, index) => console.log(`${index + 1}. ${folder.name} (${folder.id})`));
-
-  const choice = await askQuestion("\nSelect a folder number: ");
-  const selectedFolder = folders[parseInt(choice) - 1];
-
-  if (selectedFolder) {
-    StorageRegistry.getConfigStorage().save({driveRootFolder: `${selectedFolder.id}`});
-    console.log(`Selected folder: ${selectedFolder.name} (ID: ${selectedFolder.id})`);
-    return selectedFolder.id ?? null;
-  } else {
-    console.log("Invalid selection.");
-    return null;
-  }
-}
-
-async function uploadFile(filePath: string, cloudId?: string) {
-  const auth = await getOAuthClient();
-  const drive = google.drive({ version: "v3", auth });
-
-  // Ensure we have the correct folder ID
-  let folderId = StorageRegistry.getConfigStorage().load()?.driveRootFolder ?? null;
-
-  if (!folderId) {
-    console.log("Google Drive Folder not yet selected...");
-    folderId = await configureAppCloudFolder();
-  }
-
-  if (!folderId) {
-    console.error("No folder selected. Upload aborted.");
-    return;
-  }
-
-  const fileName = filePath.split("/").pop(); // Extract file name from path
-
-  const fileMetadata = {
-    name: fileName,
-    parents: [folderId],
-  };
-
-  const media = {
-    mimeType: "application/octet-stream",
-    body: fs.createReadStream(filePath),
-  };
-
-  let response;
-  let fileExists = false;
-
-  if (cloudId) {
-    fileExists = true;
-  }
-
-  if (fileExists) {
-    // If file exists, update it
-    console.log(`Updating existing file: ${fileName} (ID: ${cloudId})`);
-    response = await drive.files.update({
-      fileId: cloudId,
-      media: media,
+    const res = await this.drive.files.list({
+      q: "mimeType='application/vnd.google-apps.folder'",
+      fields: "files(id, name)",
     });
-  } else {
-    // If file doesn't exist, create a new one
-    console.log(`Uploading new file: ${fileName}`);
-    response = await drive.files.create({
-      requestBody: fileMetadata,
-      media,
-      fields: "id",
-    });
+
+    const folders = res.data.files || [];
+    if (folders.length === 0) {
+      console.log("No folders found.");
+      return null;
+    }
+
+    console.log("\nAvailable Folders:");
+    folders.forEach((folder, index) => console.log(`${index + 1}. ${folder.name} (${folder.id})`));
+
+    const choice = await askQuestion("\nSelect a folder number: ");
+    const selectedFolder = folders[parseInt(choice) - 1];
+
+    if (selectedFolder) {
+      StorageRegistry.getConfigStorage().save({driveRootFolder: `${selectedFolder.id}`});
+      console.log(`Selected folder: ${selectedFolder.name} (ID: ${selectedFolder.id})`);
+      return selectedFolder.id ?? null;
+    } else {
+      console.log("Invalid selection.");
+      return null;
+    }
   }
 
-  return response;
-}
+  static async uploadFile(filePath: string, cloudId?: string) {
 
-export { configureAppCloudFolder, uploadFile };
+    // Ensure we have the correct folder ID
+    let folderId = StorageRegistry.getConfigStorage().load()?.driveRootFolder ?? null;
+
+    if (!folderId) {
+      console.log("Google Drive Folder not yet selected...");
+      folderId = await this.configureAppCloudFolder();
+    }
+
+    if (!folderId) {
+      console.error("No folder selected. Upload aborted.");
+      return;
+    }
+
+    const fileName = filePath.split("/").pop(); // Extract file name from path
+
+    const fileMetadata = {
+      name: fileName,
+      parents: [folderId],
+    };
+
+    const media = {
+      mimeType: "application/octet-stream",
+      body: fs.createReadStream(filePath),
+    };
+
+    let response;
+    let fileExists = false;
+
+    if (cloudId) {
+      fileExists = true;
+    }
+
+    if (fileExists) {
+      // If file exists, update it
+      console.log(`Updating existing file: ${fileName} (ID: ${cloudId})`);
+      response = await this.drive.files.update({
+        fileId: cloudId,
+        media: media,
+      });
+    } else {
+      // If file doesn't exist, create a new one
+      console.log(`Uploading new file: ${fileName}`);
+      response = await this.drive.files.create({
+        requestBody: fileMetadata,
+        media,
+        fields: "id",
+      });
+    }
+
+    return response;
+  }
+  
+  static async listRevisions(fileId: string) {
+  
+    const revisions = await this.drive.revisions.list({ fileId });
+    const revisionList = revisions.data.revisions;
+
+    if (revisionList && revisionList.length > 5) {
+      const excessRevisions = revisionList.length - 5;
+
+      for (let i = 0; i < excessRevisions; i++) {
+        const revisionId = revisionList[i].id;
+        if (revisionId) {
+          await this.drive.revisions.delete({ fileId, revisionId });
+          console.log(`Deleted old revision: ${revisionId}`);
+        }
+      }
+    }
+  }
+  
+}

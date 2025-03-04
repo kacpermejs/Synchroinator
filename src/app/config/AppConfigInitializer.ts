@@ -1,4 +1,4 @@
-import { configureAppCloudFolder } from "@core/driveService";
+import { DriveService } from "@core/DriveService";
 import { Config, DEFAULT_CONFIG } from "@core/storage/SettingsStorage";
 import { StorageRegistry } from "@core/storage/StorageRegistry";
 import { askQuestion } from "@core/utils";
@@ -11,7 +11,7 @@ export interface ConfigQuestion {
 }
 
 export const cloudFolderResolver: ConfigQuestionResolverFn = async (config) => {
-  let folder = await configureAppCloudFolder();
+  let folder = await DriveService.configureAppCloudFolder();
   return folder || null; // Return folder path or null
 };
 
@@ -48,7 +48,7 @@ export class AppConfigInitializer {
         const result = await resolver(config);
         if (result !== null) {
           config[key] = result;
-          this.saveConfig(config);
+          this.saveConfig({...DEFAULT_CONFIG, ...config});
           console.log(`Saved '${key}': ${result}`);
         }
       }

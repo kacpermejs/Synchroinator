@@ -1,4 +1,4 @@
-import { uploadFile } from "@core/driveService";
+import { DriveService } from "@core/DriveService";
 import { FileChangeDetector } from "../file-change-detector/FileChangeDetector";
 import { StorageRegistry } from "./../../core/storage/StorageRegistry";
 import { RegisteredFile } from "../../core/models/RegisteredFile";

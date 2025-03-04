@@ -1,8 +1,9 @@
-import { AppConfigInitializer } from "@config/appConfigInitializer";
+import { AppConfigInitializer } from "@config/AppConfigInitializer";
 import { getOAuthClient } from "./core/auth";
 import { StorageRegistry } from "./core/storage/StorageRegistry";
 import { askQuestion } from "./core/utils";
 import { FileRegister } from "./features/file-register/FileRegister";
+import { DriveService } from "@core/DriveService";
 
 export class App {
 
@@ -11,6 +12,8 @@ export class App {
     StorageRegistry.init();
     console.log("🔑 Authenticating...");
     await getOAuthClient();
+    console.log("Initializing Drive Service...")
+    await DriveService.init();
     console.log("Checking configuration...")
     await AppConfigInitializer.init();
   }
