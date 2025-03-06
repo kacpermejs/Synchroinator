@@ -3,11 +3,20 @@ import { StorageRegistry } from "./../../core/storage/StorageRegistry";
 import { RegisteredFile } from "../../core/models/RegisteredFile";
 import fs from "fs";
 import { CloudFileStorage } from "../cloud-file-storage/CloudFileStorage";
+import { DriveService } from "@core/DriveService";
+
+interface OnlineFileData {
+  id: string;
+  modifiedTime: number;
+  upToDate: boolean;
+}
 
 export class FileRegister {
   private files: RegisteredFile[] = [];
   private storage = StorageRegistry.getGameFileRegistryStorage();
   private changeDetector = new FileChangeDetector();
+
+  private pending: OnlineFileData[] = [];
 
   constructor() {
     this.load();
@@ -47,7 +56,7 @@ export class FileRegister {
     return this.files;
   }
 
-  async syncChanged() {
+  async syncChanged(options?: {withoutUpdate?: boolean}) {
     if (this.files.length === 0) {
       console.log("⚠️ No registered files to upload.");
       return;
@@ -65,7 +74,9 @@ export class FileRegister {
       try {
         const response = await CloudFileStorage.uploadRegisteredFile(file);
         console.log(`File ${file.path} uploaded, ID: ${response?.data.id}`);
-        this.refreshRegisteredData(file, response);
+
+        if (options?.withoutUpdate == undefined || options?.withoutUpdate == false)
+          this.refreshRegisteredData(file, response);
       } catch (error) {
         console.error(`❌ Failed to upload ${file.path}: ${error}`);
         throw error;
@@ -74,17 +85,66 @@ export class FileRegister {
     if (nothingToUpload) console.log("No change");
   }
 
-  refreshRegisteredData(file: RegisteredFile, uploadResponse: any) {
+  private refreshRegisteredData(file: RegisteredFile, uploadResponse: any) {
     if (!fs.existsSync(file.path)) {
       console.warn(`⚠️ File no longer exists: ${file.path}`);
       return;
     }
-    file.lastSync = Date.now();
+    file.lastSync = this.responseModifiedTime(uploadResponse);
     file.lastModification = this.changeDetector.getLatestModificationTime(
       file.path
     );
     file.onlineId = uploadResponse?.data.id;
 
     this.save();
+  }
+
+  private responseModifiedTime(uploadResponse: any): number | undefined {
+    const time = uploadResponse?.data.appProperties.localModifiedTime;
+    if (time)
+      return new Date(time).getTime();
+
+    console.log("No time provided, using local Date.now()");
+    return Date.now();
+  }
+  
+  async checkIfUpToDate(): Promise<boolean> {
+    const fileData = await DriveService.getFilesMetadata();
+
+    const parsed = fileData?.data.files?.map( f => {
+      const time = f.appProperties?.localModifiedTime;
+
+      if (!time)
+        throw Error("Incomplete metadata stored in the cloud!");
+      if (!f.id)
+        throw Error("Incomplete data!");
+
+      const localFile = this.files.filter( local => local.onlineId == f.id)[0];
+
+      const cloudUnixTime = new Date(time).getTime();
+
+      const pendingFile = {
+        id: f.id,
+        modifiedTime: cloudUnixTime,
+        upToDate: localFile.lastSync == cloudUnixTime
+      } as OnlineFileData;
+
+      return pendingFile;
+    });
+
+    if (!parsed)
+      console.log("No files in the cloud yet.");
+    else {
+      this.pending = parsed?.filter( f => f.upToDate == false);
+    }
+    return this.pending.length > 0 ? false : true;
+  }
+
+  checkIfLocalFilesAreNewer() {
+    throw new Error("Method not implemented."); //TODO
+  }
+
+  getPendingFiles() {
+    return this.pending;
   }
 }

@@ -26,7 +26,7 @@ export class App {
 
     // main program loop
     while (true) {
-      const command = await askQuestion("Enter command (register, save, exit): ");
+      const command = await askQuestion("Enter command (register, save, rev, list, exit): ");
 
       switch (command.toLowerCase()) {
         case "register":
@@ -45,6 +45,24 @@ export class App {
         
         case "rev":
           await revisionManager.listRevisions(fileRegister);
+          break;
+
+        case "list":
+          const fileList = await DriveService.getFilesMetadata();
+          console.log(fileList?.data.files);
+          break;
+
+        case "check":
+          const upToDate = await fileRegister.checkIfUpToDate();
+          console.log(upToDate ? "Up to date!" : "You have some desynchronized files!");
+          const pendingFiles = fileRegister.getPendingFiles();
+          if (pendingFiles.length > 0) {
+            console.log(pendingFiles);
+          }
+          break;
+        
+        case "silent":
+          await fileRegister.syncChanged({withoutUpdate: true});
           break;
 
         case "exit":

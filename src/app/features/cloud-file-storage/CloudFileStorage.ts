@@ -3,20 +3,23 @@ import { RegisteredFile } from "@core/models/RegisteredFile";
 import archiver from "archiver";
 import path from "path";
 import fs from "fs";
+import { getLatestModificationTime } from "../file-change-detector/FileChangeDetector";
 
 export class CloudFileStorage {
 
   static async uploadRegisteredFile(file: RegisteredFile) {
+    const modifiedTime = getLatestModificationTime(file.path);
+
     const fileStats = fs.statSync(file.path);
     if (fileStats.isDirectory()) {
-      return this.uploadDirectoryAsZip(file.path, file.onlineId);
+      return this.uploadDirectoryAsZip(file.path, file.onlineId, {modifiedTime});
     }
-    return DriveService.uploadFile(file.path, file.onlineId);
+    return DriveService.uploadFile(file.path, file.onlineId, {modifiedTime});
   }
   
-  static async uploadDirectoryAsZip(directoryPath: string, cloudId?: string) {
+  static async uploadDirectoryAsZip(directoryPath: string, cloudId?: string, options?: {modifiedTime?: number}) {
     const zipPath = await this.zipDirectory(directoryPath);
-    return await DriveService.uploadFile(zipPath, cloudId);
+    return await DriveService.uploadFile(zipPath, cloudId, options);
   }
   
   private static async zipDirectory(sourceDir: string): Promise<string> {

@@ -19,24 +19,28 @@ export class FileChangeDetector {
   }
 
   getLatestModificationTime(directoryPath: string): number {
-    let latestTime = 0;
-  
-    function checkDir(dir: string) {
-      const entries = fs.readdirSync(dir);
-  
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry);
-        const stats = fs.statSync(fullPath);
-  
-        if (stats.isDirectory()) {
-          checkDir(fullPath); // Recursively check subdirectories
-        } else {
-          latestTime = Math.max(latestTime, stats.mtimeMs); // Update latest time
-        }
+    return getLatestModificationTime(directoryPath);
+  }
+}
+
+export function getLatestModificationTime(directoryPath: string): number {
+  let latestTime = 0;
+
+  function checkDir(dir: string) {
+    const entries = fs.readdirSync(dir);
+
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry);
+      const stats = fs.statSync(fullPath);
+
+      if (stats.isDirectory()) {
+        checkDir(fullPath); // Recursively check subdirectories
+      } else {
+        latestTime = Math.max(latestTime, Math.floor(stats.mtimeMs)); // Update latest time
       }
     }
-  
-    checkDir(directoryPath);
-    return latestTime;
   }
+
+  checkDir(directoryPath);
+  return latestTime;
 }

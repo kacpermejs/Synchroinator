@@ -43,7 +43,7 @@ export class DriveService {
     }
   }
 
-  static async uploadFile(filePath: string, cloudId?: string) {
+  static async uploadFile(filePath: string, cloudId?: string, options?: {modifiedTime?: number}) {
 
     // Ensure we have the correct folder ID
     let folderId = StorageRegistry.getConfigStorage().load()?.driveRootFolder ?? null;
@@ -60,10 +60,23 @@ export class DriveService {
 
     const fileName = filePath.split("/").pop(); // Extract file name from path
 
-    const fileMetadata = {
+    let fileMetadata: any = {
       name: fileName,
-      parents: [folderId],
+      parents: [folderId]
     };
+    
+    console.log("options");
+    console.log(options);
+
+    let customMetadata: any;
+
+    if (options?.modifiedTime) {
+      
+      const isoString = new Date(options.modifiedTime).toISOString();
+      customMetadata = {...customMetadata,
+        localModifiedTime: isoString,
+      }
+    }
 
     const media = {
       mimeType: "application/octet-stream",
@@ -83,14 +96,18 @@ export class DriveService {
       response = await this.drive.files.update({
         fileId: cloudId,
         media: media,
+        fields: "id, appProperties",
+        requestBody: {
+          appProperties: customMetadata
+        }
       });
     } else {
       // If file doesn't exist, create a new one
       console.log(`Uploading new file: ${fileName}`);
       response = await this.drive.files.create({
-        requestBody: fileMetadata,
+        requestBody: {...fileMetadata, appProperties: customMetadata},
         media,
-        fields: "id",
+        fields: "id, appProperties",
       });
     }
 
@@ -103,5 +120,25 @@ export class DriveService {
     const revisionList = revisions.data.revisions;
     return revisionList;
   }
-  
+
+  static async getFilesMetadata() {
+    let folderId = StorageRegistry.getConfigStorage().load()?.driveRootFolder ?? null;
+
+    if (!folderId) {
+      console.log("Google Drive Folder not yet selected...");
+      folderId = await this.configureAppCloudFolder();
+    }
+
+    if (!folderId) {
+      console.error("No folder selected. Upload aborted.");
+      return;
+    }
+
+    const res = await this.drive.files.list({
+      q: `'${folderId}' in parents and trashed=false`,
+      fields: 'files(id, name, mimeType, size, createdTime, modifiedTime, appProperties)',
+    });
+    
+    return res;
+  }
 }
