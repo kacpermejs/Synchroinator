@@ -101,18 +101,7 @@ export class DriveService {
   
     const revisions = await this.drive.revisions.list({ fileId });
     const revisionList = revisions.data.revisions;
-
-    if (revisionList && revisionList.length > 5) {
-      const excessRevisions = revisionList.length - 5;
-
-      for (let i = 0; i < excessRevisions; i++) {
-        const revisionId = revisionList[i].id;
-        if (revisionId) {
-          await this.drive.revisions.delete({ fileId, revisionId });
-          console.log(`Deleted old revision: ${revisionId}`);
-        }
-      }
-    }
+    return revisionList;
   }
   
 }

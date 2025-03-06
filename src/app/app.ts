@@ -4,6 +4,7 @@ import { StorageRegistry } from "./core/storage/StorageRegistry";
 import { askQuestion } from "./core/utils";
 import { FileRegister } from "./features/file-register/FileRegister";
 import { DriveService } from "@core/DriveService";
+import { RevisionManager } from "./features/cloud-file-storage/RevisionManager";
 
 export class App {
 
@@ -21,6 +22,7 @@ export class App {
   static async run() {
     await this.init();
     const fileRegister = new FileRegister();
+    const revisionManager = new RevisionManager();
 
     // main program loop
     while (true) {
@@ -39,6 +41,10 @@ export class App {
 
         case "save":
           await fileRegister.syncChanged();
+          break;
+        
+        case "rev":
+          await revisionManager.listRevisions(fileRegister);
           break;
 
         case "exit":
