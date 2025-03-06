@@ -4,7 +4,6 @@ import fs from "fs";
 import { askQuestion } from "./utils";
 import { CREDENTIALS_PATH, SCOPES } from "@config/google.config";
 import { StorageRegistry } from "./storage/StorageRegistry";
-import { TokenStorage } from "./storage/TokenStorage";
 
 async function getOAuthClient(): Promise<OAuth2Client> {
   const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, "utf-8"));

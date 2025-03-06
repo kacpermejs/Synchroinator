@@ -1,9 +1,7 @@
-import { DriveService } from "@core/DriveService";
 import { FileChangeDetector } from "../file-change-detector/FileChangeDetector";
 import { StorageRegistry } from "./../../core/storage/StorageRegistry";
 import { RegisteredFile } from "../../core/models/RegisteredFile";
 import fs from "fs";
-import path from "path";
 import { CloudFileStorage } from "../cloud-file-storage/CloudFileStorage";
 
 export class FileRegister {
@@ -12,7 +10,6 @@ export class FileRegister {
   private changeDetector = new FileChangeDetector();
 
   constructor() {
-
     this.load();
   }
 
@@ -28,20 +25,21 @@ export class FileRegister {
     if (!fs.existsSync(filePath)) {
       throw new Error(`File does not exist: ${filePath}`);
     }
-  
-    const lastModification = this.changeDetector.getLatestModificationTime(filePath);
 
-    const existing = this.files.find(file => file.path === filePath);
-  
+    const lastModification =
+      this.changeDetector.getLatestModificationTime(filePath);
+
+    const existing = this.files.find((file) => file.path === filePath);
+
     if (!existing) {
       this.files.push({ path: filePath, lastModification: lastModification });
     }
-  
+
     this.save();
   }
 
   public unregisterFile(filePath: string) {
-    this.files = this.files.filter(file => file.path !== filePath);
+    this.files = this.files.filter((file) => file.path !== filePath);
     this.save();
   }
 
@@ -57,14 +55,13 @@ export class FileRegister {
     let nothingToUpload = true;
     console.log("Synchronizing files...");
     for (const file of this.files) {
-      console.log("Last sync: ", file.lastSync)
-      console.log("Was modified: ", this.changeDetector.wasFileModified(file))
-      if (!this.changeDetector.wasFileModified(file) && file.lastSync)
-        continue;
+      console.log("Last sync: ", file.lastSync);
+      console.log("Was modified: ", this.changeDetector.wasFileModified(file));
+      if (!this.changeDetector.wasFileModified(file) && file.lastSync) continue;
 
       //send if was modified
       nothingToUpload = false;
-      
+
       try {
         const response = await CloudFileStorage.uploadRegisteredFile(file);
         console.log(`File ${file.path} uploaded, ID: ${response?.data.id}`);
@@ -74,8 +71,7 @@ export class FileRegister {
         throw error;
       }
     }
-    if (nothingToUpload)
-      console.log("No change");
+    if (nothingToUpload) console.log("No change");
   }
 
   refreshRegisteredData(file: RegisteredFile, uploadResponse: any) {
@@ -84,9 +80,11 @@ export class FileRegister {
       return;
     }
     file.lastSync = Date.now();
-    file.lastModification = this.changeDetector.getLatestModificationTime(file.path);
+    file.lastModification = this.changeDetector.getLatestModificationTime(
+      file.path
+    );
     file.onlineId = uploadResponse?.data.id;
-  
+
     this.save();
   }
 }
