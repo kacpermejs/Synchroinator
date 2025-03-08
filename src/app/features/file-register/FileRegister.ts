@@ -3,7 +3,7 @@ import { StorageRegistry } from "./../../core/storage/StorageRegistry";
 import { RegisteredFile } from "../../core/models/RegisteredFile";
 import fs from "fs";
 import { CloudFileStorage } from "../cloud-file-storage/CloudFileStorage";
-import { DriveService } from "@core/DriveService";
+import { GoogleDriveService } from "@core/services/GoogleDriveService";
 
 interface OnlineFileData {
   id: string;
@@ -109,7 +109,7 @@ export class FileRegister {
   }
   
   async checkIfUpToDate(): Promise<boolean> {
-    const fileData = await DriveService.getFilesMetadata();
+    const fileData = await GoogleDriveService.getFilesMetadata();
 
     const parsed = fileData?.data.files?.map( f => {
       const time = f.appProperties?.localModifiedTime;

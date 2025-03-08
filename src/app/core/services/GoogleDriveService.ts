@@ -1,11 +1,11 @@
 import { drive_v3, google } from "googleapis";
 import fs from "fs";
-import { getOAuthClient } from "./auth";
-import { askQuestion } from "./utils";
-import { StorageRegistry } from "./storage/StorageRegistry";
+import { getOAuthClient } from "../auth";
+import { askQuestion } from "../utils";
+import { StorageRegistry } from "../storage/StorageRegistry";
 import { OAuth2Client } from "google-auth-library";
 
-export class DriveService {
+export class GoogleDriveService {
   static auth: OAuth2Client;
   static drive: drive_v3.Drive;
 

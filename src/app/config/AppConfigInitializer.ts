@@ -1,4 +1,4 @@
-import { DriveService } from "@core/DriveService";
+import { GoogleDriveService } from "@core/services/GoogleDriveService";
 import { Config, DEFAULT_CONFIG } from "@core/storage/SettingsStorage";
 import { StorageRegistry } from "@core/storage/StorageRegistry";
 import { askQuestion } from "@core/utils";
@@ -11,7 +11,7 @@ export interface ConfigQuestion {
 }
 
 export const cloudFolderResolver: ConfigQuestionResolverFn = async (config) => {
-  let folder = await DriveService.configureAppCloudFolder();
+  let folder = await GoogleDriveService.configureAppCloudFolder();
   return folder || null; // Return folder path or null
 };
 

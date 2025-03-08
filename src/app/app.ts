@@ -3,7 +3,7 @@ import { getOAuthClient } from "./core/auth";
 import { StorageRegistry } from "./core/storage/StorageRegistry";
 import { askQuestion } from "./core/utils";
 import { FileRegister } from "./features/file-register/FileRegister";
-import { DriveService } from "@core/DriveService";
+import { GoogleDriveService } from "@core/services/GoogleDriveService";
 import { RevisionManager } from "./features/cloud-file-storage/RevisionManager";
 
 export class App {
@@ -14,7 +14,7 @@ export class App {
     console.log("🔑 Authenticating...");
     await getOAuthClient();
     console.log("Initializing Drive Service...")
-    await DriveService.init();
+    await GoogleDriveService.init();
     console.log("Checking configuration...")
     await AppConfigInitializer.init();
   }
@@ -48,7 +48,7 @@ export class App {
           break;
 
         case "list":
-          const fileList = await DriveService.getFilesMetadata();
+          const fileList = await GoogleDriveService.getFilesMetadata();
           console.log(fileList?.data.files);
           break;
 
