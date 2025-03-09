@@ -4,12 +4,8 @@ import { RegisteredFile } from "../../core/models/RegisteredFile";
 import fs from "fs";
 import { CloudFileStorage } from "../cloud-file-storage/CloudFileStorage";
 import { GoogleDriveService } from "@core/services/GoogleDriveService";
-
-interface OnlineFileData {
-  id: string;
-  modifiedTime: number;
-  upToDate: boolean;
-}
+import { OnlineFileData } from "./OnlineFileData";
+import { ConflictHandler } from "../conflict-handler/ConflictHandler";
 
 export class FileRegister {
   private files: RegisteredFile[] = [];
@@ -112,21 +108,27 @@ export class FileRegister {
     const fileData = await GoogleDriveService.getFilesMetadata();
 
     const parsed = fileData?.data.files?.map( f => {
-      const time = f.appProperties?.localModifiedTime;
+      let time = f.appProperties?.localModifiedTime;
+
+      if (!time) {
+        console.warn("Incomplete metadata stored in the cloud! Using modifiedTime instead.");
+        time = f.modifiedTime ?? undefined;
+      }
 
       if (!time)
         throw Error("Incomplete metadata stored in the cloud!");
+
       if (!f.id)
         throw Error("Incomplete data!");
 
-      const localFile = this.files.filter( local => local.onlineId == f.id)[0];
+      const localFile = this.files.find( local => local.onlineId == f.id);
 
       const cloudUnixTime = new Date(time).getTime();
 
       const pendingFile = {
         id: f.id,
         modifiedTime: cloudUnixTime,
-        upToDate: localFile.lastSync == cloudUnixTime
+        upToDate: localFile ? localFile.lastSync == cloudUnixTime : false
       } as OnlineFileData;
 
       return pendingFile;
@@ -140,8 +142,57 @@ export class FileRegister {
     return this.pending.length > 0 ? false : true;
   }
 
-  checkIfLocalFilesAreNewer() {
-    throw new Error("Method not implemented."); //TODO
+  getByOnlineId(id: string): RegisteredFile | undefined {
+    return this.files.find( (f) => f.onlineId === id);
+  }
+
+  async resolveConflicts(files: OnlineFileData[], handler: ConflictHandler) {
+    for (let file of files) {
+      await handler.handle(file);
+    }
+  }
+
+  async sendSelectedFile(localFile: RegisteredFile): Promise<boolean> {
+    try {
+      const response = await CloudFileStorage.uploadRegisteredFile(localFile);
+      console.log(`File ${localFile.path} uploaded, ID: ${response?.data.id}`);
+      this.refreshRegisteredData(localFile, response);
+      return true;
+      
+    } catch (error) {
+      console.error(`❌ Failed to upload ${localFile.path}: ${error}`);
+      return false;
+    }
+  }
+
+  async safeDownload(cloudFile: OnlineFileData, localFile: RegisteredFile) {
+    console.log(`Making backup of registered file:\n ${localFile.path}`);
+    //make backup
+    const backupPath = await this.makeBackup();
+    console.log(`Backup path ${backupPath}`);
+    //download
+    console.log(`Downloading cloud file to registered path: \n ${localFile.path}`);
+    await this.downloadNewVersion(cloudFile, localFile);
+
+  }
+
+  async makeBackup(): Promise<string> {
+    return "<!!!Backup not implemented!!!>"
+  }
+
+  async downloadAndRegister(path: string, cloudFile: OnlineFileData) {
+    console.log(`Downloading and registering a new file under this path:\n ${path}`);
+    //TODO
+    //download
+
+    //register new path with existing online id
+  }
+
+  private downloadNewVersion(cloudFile: OnlineFileData, localFile: RegisteredFile) {
+    //TODO
+    //download
+
+    //refresh file register with new modification/sync date 
   }
 
   getPendingFiles() {

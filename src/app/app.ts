@@ -5,6 +5,7 @@ import { askQuestion } from "./core/utils";
 import { FileRegister } from "./features/file-register/FileRegister";
 import { GoogleDriveService } from "@core/services/GoogleDriveService";
 import { RevisionManager } from "./features/cloud-file-storage/RevisionManager";
+import { ConflictHandler } from "./features/conflict-handler/ConflictHandler";
 
 export class App {
 
@@ -58,6 +59,8 @@ export class App {
           const pendingFiles = fileRegister.getPendingFiles();
           if (pendingFiles.length > 0) {
             console.log(pendingFiles);
+            const handler = new ConflictHandler(fileRegister);
+            await fileRegister.resolveConflicts(pendingFiles, handler);
           }
           break;
         
