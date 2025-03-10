@@ -72,7 +72,7 @@ export class FileRegister {
         console.log(`File ${file.path} uploaded, ID: ${response?.data.id}`);
 
         if (options?.withoutUpdate == undefined || options?.withoutUpdate == false)
-          this.refreshRegisteredData(file, response);
+          this.refreshRegisteredFileAfterUpload(file, response);
       } catch (error) {
         console.error(`❌ Failed to upload ${file.path}: ${error}`);
         throw error;
@@ -81,18 +81,22 @@ export class FileRegister {
     if (nothingToUpload) console.log("No change");
   }
 
-  private refreshRegisteredData(file: RegisteredFile, uploadResponse: any) {
+  private refreshRegisteredFileAfterUpload(file: RegisteredFile, uploadResponse: any) {
+    this.refreshLocalFileInfo(file);
+    file.lastSync = this.responseModifiedTime(uploadResponse);
+    file.onlineId = uploadResponse?.data.id;
+
+    this.save();
+  }
+
+  private refreshLocalFileInfo(file: RegisteredFile) {
     if (!fs.existsSync(file.path)) {
       console.warn(`⚠️ File no longer exists: ${file.path}`);
       return;
     }
-    file.lastSync = this.responseModifiedTime(uploadResponse);
     file.lastModification = this.changeDetector.getLatestModificationTime(
       file.path
     );
-    file.onlineId = uploadResponse?.data.id;
-
-    this.save();
   }
 
   private responseModifiedTime(uploadResponse: any): number | undefined {
@@ -127,6 +131,7 @@ export class FileRegister {
 
       const pendingFile = {
         id: f.id,
+        name: f.name,
         modifiedTime: cloudUnixTime,
         upToDate: localFile ? localFile.lastSync == cloudUnixTime : false
       } as OnlineFileData;
@@ -148,6 +153,11 @@ export class FileRegister {
 
   async resolveConflicts(files: OnlineFileData[], handler: ConflictHandler) {
     for (let file of files) {
+      const localFile = this.files.find(f => f.onlineId == file.id);
+      if (localFile) {
+        this.refreshLocalFileInfo(localFile);
+        this.save();
+      }
       await handler.handle(file);
     }
   }
@@ -156,7 +166,7 @@ export class FileRegister {
     try {
       const response = await CloudFileStorage.uploadRegisteredFile(localFile);
       console.log(`File ${localFile.path} uploaded, ID: ${response?.data.id}`);
-      this.refreshRegisteredData(localFile, response);
+      this.refreshRegisteredFileAfterUpload(localFile, response);
       return true;
       
     } catch (error) {
@@ -165,14 +175,14 @@ export class FileRegister {
     }
   }
 
-  async safeDownload(cloudFile: OnlineFileData, localFile: RegisteredFile) {
+  async safeDownload(localFile: RegisteredFile) {
     console.log(`Making backup of registered file:\n ${localFile.path}`);
     //make backup
     const backupPath = await this.makeBackup();
     console.log(`Backup path ${backupPath}`);
     //download
     console.log(`Downloading cloud file to registered path: \n ${localFile.path}`);
-    await this.downloadNewVersion(cloudFile, localFile);
+    await this.downloadNewVersion(localFile);
 
   }
 
@@ -184,15 +194,21 @@ export class FileRegister {
     console.log(`Downloading and registering a new file under this path:\n ${path}`);
     //TODO
     //download
+    const downloadResult = await CloudFileStorage.downloadAndExtractFile(cloudFile.id, path, true);
 
     //register new path with existing online id
+    this.registerFile(downloadResult.path);
   }
 
-  private downloadNewVersion(cloudFile: OnlineFileData, localFile: RegisteredFile) {
+  private async downloadNewVersion(localFile: RegisteredFile) {
     //TODO
     //download
-
+    if (!localFile.onlineId) {
+      throw new Error("No cloud file id to download from!");
+    }
+    const res = await CloudFileStorage.downloadAndExtractFile(localFile.onlineId, localFile.path, true); 
     //refresh file register with new modification/sync date 
+    this.refreshRegisteredFileAfterUpload(localFile, res.metadata);
   }
 
   getPendingFiles() {

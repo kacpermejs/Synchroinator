@@ -26,6 +26,7 @@ export class ConflictHandler {
 
     console.log(
       `Conflicting files: \n
+      File: ${localFile?.path ?? cloudFile.name}\n
       Local file modification date: ${localDateStr} \n
       Cloud file modification date: ${cloudDateStr}\n`
     );
@@ -37,10 +38,10 @@ export class ConflictHandler {
       answer = await this.getFileSelection();
       switch (answer) {
         case FileSelection.Local:
-        await this.useLocal(localFile, cloudFile);
+        await this.useLocal(localFile);
         break;
       case FileSelection.Cloud:
-        await this.useCloud(cloudFile, localFile);
+        await this.useCloud(localFile);
         break;
         case FileSelection.None:
         console.log("Skipping this file!");
@@ -68,11 +69,11 @@ export class ConflictHandler {
     }
   }
 
-  async useCloud(cloudFile: OnlineFileData, localFile: RegisteredFile) {
-    await this.fileRegister.safeDownload(cloudFile, localFile);
+  async useCloud(localFile: RegisteredFile) {
+    await this.fileRegister.safeDownload(localFile);
   }
 
-  async useLocal(localFile: RegisteredFile, cloudFile: OnlineFileData) {
+  async useLocal(localFile: RegisteredFile) {
     
     let result = false;
     while (!result) {

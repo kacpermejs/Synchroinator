@@ -4,6 +4,7 @@ import { getOAuthClient } from "../auth";
 import { askQuestion } from "../utils";
 import { StorageRegistry } from "../storage/StorageRegistry";
 import { OAuth2Client } from "google-auth-library";
+import path from "path";
 
 export class GoogleDriveService {
   static auth: OAuth2Client;
@@ -141,4 +142,51 @@ export class GoogleDriveService {
     
     return res;
   }
+
+  static async downloadFile(fileId: string, destinationDir: string): Promise<{path: string, metadata: any}> {
+    // Retrieve file metadata to get the file name
+    const metadataResponse = await this.drive.files.get({
+      fileId,
+      fields: "id, name, appProperties"
+    });
+  
+    let fileName = metadataResponse.data.name;
+    if (!fileName) {
+      throw new Error("File name could not be retrieved from Google Drive.");
+    }
+
+    fileName = path.basename(fileName);
+  
+    // Construct the full destination path
+    const fullPath = path.join(destinationDir, fileName);
+  
+    // Create a writable stream to the destination file
+    const dest = fs.createWriteStream(fullPath);
+  
+    return new Promise<{path: string, metadata: any}>((resolve, reject) => {
+      this.drive.files.get(
+        { fileId, alt: "media" },
+        { responseType: "stream" },
+        (err, res) => {
+          if (err) {
+            return reject(err);
+          }
+          
+          if (!res || !res.data) {
+            return reject(new Error("Failed to download file: No response received."));
+          }
+  
+          res.data
+            .on("end", () => {
+              resolve({path: fullPath, metadata: metadataResponse});
+            })
+            .on("error", (error: Error) => {
+              reject(error);
+            })
+            .pipe(dest);
+        }
+      );
+    });
+  }
+  
 }
